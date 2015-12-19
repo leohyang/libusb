@@ -31,8 +31,8 @@ static void print_devs(libusb_device **devs)
 	libusb_device *dev;
 	libusb_device_handle *dhandle;
 
-	char  istrmanu[32], istrproduct[32], istrsn[32];
-	int i = 0, j = 0,k=0,m=0, n=0, alt=0;
+	char  istrmanu[64], istrproduct[64], istrsn[64], ucode[128];
+	int i = 0, j = 0,k=0,m=0, n=0, alt=0, count, id;
 	uint8_t path[8]; 
 
 	struct libusb_config_descriptor * cdesc = &cd;
@@ -45,11 +45,25 @@ static void print_devs(libusb_device **devs)
 			fprintf(stderr, "failed to get device descriptor\n");
 			return;
 		}
+		memset(istrmanu, 0, sizeof(istrmanu));
+		memset(istrproduct, 0, sizeof(istrproduct));
+		memset(istrsn, 0, sizeof(istrsn));
+		
 
 		libusb_open(dev, &dhandle);
-		libusb_get_string_descriptor(dhandle,desc.iManufacturer,0x0409,istrmanu,32);
-		libusb_get_string_descriptor(dhandle,desc.iProduct,0x0409,istrproduct,32);
-		libusb_get_string_descriptor(dhandle,desc.iSerialNumber,0x0409,istrsn,32);
+		count = libusb_get_string_descriptor(dhandle,desc.iManufacturer,0x0409,ucode,sizeof(ucode));
+		for ( id= 0; id < count; id += 2) {
+			istrmanu[id/2] = ucode[id];
+		}
+		count = libusb_get_string_descriptor(dhandle,desc.iProduct,0x0409,ucode,sizeof(ucode));
+		for ( id= 0; id < count; id += 2) {
+			istrproduct[id/2] = ucode[id];
+		}
+		count = libusb_get_string_descriptor(dhandle,desc.iSerialNumber,0x0409,ucode,sizeof(ucode));
+		for ( id= 0; id < count; id += 2) {
+			istrsn[id/2] = ucode[id];
+		}
+
 
 
 		printf("\n%04x:%04x (bus %d, device %d) length:%d type:%d version:%04x class:%d SubClass:%d protocol:%d ",
@@ -58,6 +72,7 @@ static void print_devs(libusb_device **devs)
 			desc.bLength, desc.bDescriptorType, desc.bcdUSB,
 			desc.bDeviceClass, desc.bDeviceSubClass, desc.bDeviceProtocol
 			);
+
 
 		
 		printf("\tMaxPktSize0:%d Configurations:%d ",desc.bMaxPacketSize0, desc.bNumConfigurations);
@@ -72,7 +87,7 @@ static void print_devs(libusb_device **devs)
 			}
 			printf("\n");
 
-
+				printf("%s : %s : %s\n",istrmanu, istrproduct,istrsn);
 
 		for ( k = 0; k< desc.bNumConfigurations; k++) {
 
